@@ -36,6 +36,7 @@ RUN ARCH=$(uname -m); \
         curl \
         dbus-1-tools \
         device-mapper \
+        distrobox \
         dosfstools \
         dracut \
         e2fsprogs \
