@@ -41,6 +41,7 @@ RUN ARCH=$(uname -m); \
         e2fsprogs \
         elemental-toolkit \
         fastfetch \
+        featherpad \
         findutils \
         fontconfig \
         gedit \
@@ -56,19 +57,23 @@ RUN ARCH=$(uname -m); \
         i3lock \
         iproute2 \
         kanshi \
+        kate \
         kernel-default \
         konsole \
         labwc \
         less \
         lvm2 \
+        lximage-qt \
         lxqt-labwc-session \
         lxqt-session \
         lxqt-wayland-session \
+        meld \
         Mesa \
         Mesa-dri \
         MozillaFirefox \
         mtools \
         NetworkManager \
+        noto-sans-cjk-fonts \
         openbox \
         openssh-clients \
         openssh-server \
@@ -78,17 +83,21 @@ RUN ARCH=$(uname -m); \
         podman \
         python3 \
         qt6-wayland \
+        qterminal \
         rsync \
+        screengrab \
         sddm \
         sed \
-        slurp \ 
+        slurp \
         snapper \
+        spectacle \
         squashfs \
         sudo \
         swaybg \
         syncthing \
         systemd \
         tar \
+        tilix \
         timezone \
         uv \
         vim \
@@ -105,6 +114,7 @@ RUN ARCH=$(uname -m); \
         xwayland && \
     fc-cache -f && \
     zypper clean --all
+
 
 # 4. 基础用户与免密 sudo 配置 (liveuser 与 peter)
 # RUN groupadd -f wheel && \
