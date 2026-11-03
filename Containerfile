@@ -157,7 +157,7 @@ RUN mkdir -p /system/oem && \
 # RUN mkdir -p /etc/elemental/config.d && \
 #     printf 'snapshotter:\n  type: loopdevice\n  max-snaps: 2\n  config:\n    fs: ext4\n' > /etc/elemental/config.d/01_snapshotter.yaml
 RUN mkdir -p /etc/elemental/config.d && \
-    printf 'snapshotter:\n  type: loopdevice\n  max-snaps: 2\n  config:\n    fs: ext4\n    size: 8192\n' > /etc/elemental/config.d/01_snapshotter.yaml
+    printf 'snapshotter:\n  type: loopdevice\n  max-snaps: 2\n  config:\n    fs: ext4\n    size: 3072\n' > /etc/elemental/config.d/01_snapshotter.yaml
 
 # ----------------------------------------------------
 # 6. 注入持久化目录初始化脚本与 Systemd 服务 (解决空寻址与桌面失忆)
