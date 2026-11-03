@@ -43,6 +43,7 @@ RUN ARCH=$(uname -m); \
         fastfetch \
         featherpad \
         findutils \
+        filelight \
         fontconfig \
         gedit \
         glib2-tools \
