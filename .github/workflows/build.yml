@@ -176,7 +176,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # =========================================================================
-      # 仅追加项 1：构建 RAW 镜像并流式 xz 压缩（不切片，存入专属目录）
+      # 仅追加项 1：构建 RAW 镜像并流式 xz 压缩（超过 1.5GB 自动切片）
       # =========================================================================
       - name: Build and Compress Hybrid RAW Disk Image
         run: |
@@ -202,19 +202,41 @@ jobs:
           # 规避 runner 用户与 docker root 的权限冲突
           sudo chown -R $USER:$USER build-output/
 
-          # 流式多线程 xz 压缩，直接写入独立输出目录
+          # 流式多线程 xz 压缩
           echo "==> Compressing RAW to XZ..."
-          XZ_FILE="raw-draft-assets/${RAW_BASE_NAME}.raw.xz"
+          XZ_FILE_NAME="${RAW_BASE_NAME}.raw.xz"
+          XZ_FILE="raw-draft-assets/${XZ_FILE_NAME}"
           xz -T0 -v -6 < "${RAW_FILE}" > "${XZ_FILE}"
           rm -f "${RAW_FILE}"
 
-          # 生成 SHA256 校验和
+          # 检测 .raw.xz 体积并在超过 1.5GB (1572864000 字节) 时自动切片
+          FILE_SIZE=$(stat -c%s "${XZ_FILE}")
+          MAX_SIZE=1572864000
+
           cd raw-draft-assets
-          sha256sum "$(basename "${XZ_FILE}")" > "$(basename "${XZ_FILE}").sha256"
+          # 先对完整 .raw.xz 生成初始 SHA256 校验和
+          sha256sum "${XZ_FILE_NAME}" > "${XZ_FILE_NAME}.sha256"
+
+          if [ "${FILE_SIZE}" -gt "${MAX_SIZE}" ]; then
+            echo "RAW.XZ size (${FILE_SIZE} bytes) exceeds 1.5GB. Splitting into 1500M parts..."
+            split -b 1500M -d -a 2 "${XZ_FILE_NAME}" "${XZ_FILE_NAME}.part"
+            
+            # 删除未切片的单体大文件，避免上传时触发 2GB 限制报错
+            rm -f "${XZ_FILE_NAME}"
+            
+            # 记录各切片的校验和
+            sha256sum ${XZ_FILE_NAME}.part* >> "${XZ_FILE_NAME}.sha256"
+            echo "IS_RAW_SPLIT=true" >> $GITHUB_ENV
+          else
+            echo "RAW.XZ size (${FILE_SIZE} bytes) is within 1.5GB. Keeping intact..."
+            echo "IS_RAW_SPLIT=false" >> $GITHUB_ENV
+          fi
+
+          echo "RAW_XZ_BASE_NAME=${XZ_FILE_NAME}" >> $GITHUB_ENV
           ls -lh
 
       # =========================================================================
-      # 仅追加项 2：将完整的 .raw.xz 发布为草稿（Draft Release）
+      # 仅追加项 2：将 .raw.xz（或其切片文件）发布为草稿（Draft Release）
       # =========================================================================
       - name: Publish Draft Release (RAW Disk Image)
         uses: softprops/action-gh-release@v2
@@ -228,9 +250,22 @@ jobs:
           body: |
             ### Elemental Bootable RAW Disk Image (Draft)
             - **Commit SHA:** `${{ github.sha }}`
-            - **Format:** Unsplit Hybrid RAW Image (SeaBIOS + UEFI compatible)
+            - **Format:** Hybrid RAW Image (SeaBIOS + UEFI compatible)
+            - **Split Files:** `${{ env.IS_RAW_SPLIT }}`
+
+            ${{ env.IS_RAW_SPLIT == 'true' && format('#### 拼接与还原 RAW 镜像命令：
+            ```bash
+            # 1. 拼接切片还原为完整 .raw.xz
+            cat {0}.part* > {0}
+            sha256sum -c {0}.sha256
+
+            # 2. 解压还原为可引导 .raw 磁盘文件
+            xz -d -T0 -v {0}
+            ```', env.RAW_XZ_BASE_NAME) || '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      
       
       # =========================================================================
       # 5. 末尾：登录并同步镜像到阿里云 ACR
