@@ -33,6 +33,7 @@ RUN ARCH=$(uname -m); \
         btop \
         btrfsmaintenance \
         btrfsprogs \
+        chromium \
         curl \
         dbus-1-tools \
         device-mapper \
