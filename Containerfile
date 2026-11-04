@@ -75,6 +75,7 @@ RUN ARCH=$(uname -m); \
         Mesa-dri \
         MozillaFirefox \
         mtools \
+        nano \
         NetworkManager \
         noto-sans-cjk-fonts \
         openbox \
