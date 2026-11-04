@@ -120,19 +120,8 @@ RUN ARCH=$(uname -m); \
     fc-cache -f && \
     zypper clean --all
 
-
-# 4. 基础用户与免密 sudo 配置 (liveuser 与 peter)
-# RUN groupadd -f wheel && \
-#     useradd -m -G wheel -s /bin/bash liveuser && \
-#     echo "liveuser:liveuser" | chpasswd && \
-#     useradd -m -G wheel -s /bin/bash peter && \
-#     echo "peter:peter" | chpasswd && \
-#     echo "root:root" | chpasswd && \
-#     echo "%wheel ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers && \
-#     echo 'Defaults secure_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"' >> /etc/sudoers
-
 # ----------------------------------------------------
-# 4. 基础用户与免密 sudo 配置 (保留 sudo，注入加盐哈希密码)
+# 4. 基础用户与免密 sudo 配置
 # ----------------------------------------------------
 RUN groupadd -f wheel && \
     useradd -m -G wheel -s /bin/bash liveuser && \
@@ -143,26 +132,19 @@ RUN groupadd -f wheel && \
     echo 'Defaults secure_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"' >> /etc/sudoers
 
 # ----------------------------------------------------
-# 4c. 彻底锁死 root 密码（Elemental 原生阶段钩子）
+# 4c. 彻底锁死 root 密码
 # ----------------------------------------------------
 RUN mkdir -p /system/oem && \
     printf 'name: "Root Password Enforcer"\nstages:\n  fs.after:\n    - name: "Set root password hash"\n      commands:\n        - usermod -p '\''$6$3HzcniSmLcqcdDAD$XaGco3Esx69ux6SgsKCac/TWld3/L8ADC1I7eZRtaMvsPfNeb0cb6doyXP2qeyw6DOjVK.BluxZfQcAD/qR6e.'\'' root\n' > /system/oem/01_root_pw.yaml
 
-
 # ----------------------------------------------------
-# 5. 固化 Elemental 分区配置（Btrfs 原生快照）
+# 5. 固化 Elemental 配置（改用 btrfs 快照）
 # ----------------------------------------------------
-# RUN mkdir -p /etc/elemental && \
-#    printf 'install:\n  snapshotter:\n    type: btrfs\n  partitions:\n    recovery:\n      size: 8192\n      filesystem: btrfs\n    state:\n      size: 20480\n      filesystem: btrfs\n    persistent:\n      size: 0\n      filesystem: btrfs\n' > /etc/elemental/config.yaml
-
-# 维持当前的 loopdevice 机制，不再使用错误的 Btrfs 快照器声明
-# RUN mkdir -p /etc/elemental/config.d && \
-#     printf 'snapshotter:\n  type: loopdevice\n  max-snaps: 2\n  config:\n    fs: ext4\n' > /etc/elemental/config.d/01_snapshotter.yaml
 RUN mkdir -p /etc/elemental/config.d && \
-    printf 'snapshotter:\n  type: loopdevice\n  max-snaps: 2\n  config:\n    fs: ext4\n    size: 3072\n' > /etc/elemental/config.d/01_snapshotter.yaml
+    printf 'snapshotter:\n  type: btrfs\n  max-snaps: 4\n' > /etc/elemental/config.d/01_snapshotter.yaml
 
 # ----------------------------------------------------
-# 6. 注入持久化目录初始化脚本与 Systemd 服务 (解决空寻址与桌面失忆)
+# 6. 注入持久化目录初始化脚本与 Systemd 服务
 # ----------------------------------------------------
 RUN mkdir -p /usr/local/bin && \
     printf '#!/bin/bash\nPERSISTENT_HOME="/run/elemental/persistent/home/peter"\nPERSISTENT_ROOT="/run/elemental/persistent/root"\nif [ ! -d "$PERSISTENT_HOME" ]; then\n    mkdir -p "$PERSISTENT_HOME/.config/lxqt"\n    mkdir -p "$PERSISTENT_ROOT"\n    cp -a /etc/skel/. "$PERSISTENT_HOME/" || true\n    printf "[General]\\nwindow_manager=labwc\\nleave_confirmation=true\\n\\n[Wayland]\\ncompositor=labwc\\nscreen_locker=swaylock\\n" > "$PERSISTENT_HOME/.config/lxqt/session.conf"\n    chown -R peter:peter "$PERSISTENT_HOME"\nfi\n' > /usr/local/bin/init-persistent-home.sh && \
@@ -171,9 +153,6 @@ RUN mkdir -p /usr/local/bin && \
 RUN printf '[Unit]\nDescription=Initialize Persistent Home Directory structure for Elemental\nDefaultDependencies=no\nAfter=run-elemental-persistent.mount\nBefore=local-fs.target home.mount\n\n[Service]\nType=oneshot\nExecStart=/usr/local/bin/init-persistent-home.sh\nRemainAfterExit=yes\n\n[Install]\nWantedBy=local-fs.target\n' > /etc/systemd/system/init-persistent-home.service
 
 RUN systemctl enable init-persistent-home.service
-
-# RUN systemctl enable init-persistent-home.service && \
-#     printf '/run/elemental/persistent/home /home none bind,x-systemd.requires-mounts-for=/run/elemental/persistent 0 0\n/run/elemental/persistent/root /root none bind,x-systemd.requires-mounts-for=/run/elemental/persistent 0 0\n' >> /etc/fstab
 
 # ------------------------------
 # 7. 固化 SDDM 默认显示管理器与系统启动目标软链接
