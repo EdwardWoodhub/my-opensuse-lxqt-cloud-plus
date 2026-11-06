@@ -99,6 +99,7 @@ RUN ARCH=$(uname -m); \
         squashfs \
         sudo \
         swaybg \
+        swaylock \
         syncthing \
         systemd \
         tar \
@@ -136,7 +137,12 @@ RUN groupadd -f wheel && \
 # 4c. 彻底锁死 root 密码
 # ----------------------------------------------------
 RUN mkdir -p /system/oem && \
-    printf 'name: "Root Password Enforcer"\nstages:\n  fs.after:\n    - name: "Set root password hash"\n      commands:\n        - usermod -p '\''$6$3HzcniSmLcqcdDAD$XaGco3Esx69ux6SgsKCac/TWld3/L8ADC1I7eZRtaMvsPfNeb0cb6doyXP2qeyw6DOjVK.BluxZfQcAD/qR6e.'\'' root\n' > /system/oem/01_root_pw.yaml
+printf 'name: "Root Password Enforcer"\n\
+stages:\n\
+fs.after:\n\
+- name: "Set root password hash"\n\
+commands:\n\
+- usermod -p '\''$6$3HzcniSmLcqcdDAD$XaGco3Esx69ux6SgsKCac/TWld3/L8ADC1I7eZRtaMvsPfNeb0cb6doyXP2qeyw6DOjVK.BluxZfQcAD/qR6e.'\'' root\n' > /system/oem/01_root_pw.yaml
 
 # ----------------------------------------------------
 # 5. 固化 Elemental 配置（改用 btrfs 快照）
@@ -148,10 +154,33 @@ RUN mkdir -p /etc/elemental/config.d && \
 # 6. 注入持久化目录初始化脚本与 Systemd 服务
 # ----------------------------------------------------
 RUN mkdir -p /usr/local/bin && \
-    printf '#!/bin/bash\nPERSISTENT_HOME="/run/elemental/persistent/home/peter"\nPERSISTENT_ROOT="/run/elemental/persistent/root"\nif [ ! -d "$PERSISTENT_HOME" ]; then\n    mkdir -p "$PERSISTENT_HOME/.config/lxqt"\n    mkdir -p "$PERSISTENT_ROOT"\n    cp -a /etc/skel/. "$PERSISTENT_HOME/" || true\n    printf "[General]\\nwindow_manager=labwc\\nleave_confirmation=true\\n\\n[Wayland]\\ncompositor=labwc\\nscreen_locker=swaylock\\n" > "$PERSISTENT_HOME/.config/lxqt/session.conf"\n    chown -R peter:peter "$PERSISTENT_HOME"\nfi\n' > /usr/local/bin/init-persistent-home.sh && \
-    chmod +x /usr/local/bin/init-persistent-home.sh
+printf '#!/bin/bash\n\
+PERSISTENT_HOME="/run/elemental/persistent/home/peter"\n\
+PERSISTENT_ROOT="/run/elemental/persistent/root"\n\
+if [ ! -d "$PERSISTENT_HOME" ]; then\n\
+mkdir -p "$PERSISTENT_HOME/.config/lxqt"\n\
+mkdir -p "$PERSISTENT_ROOT"\n\
+cp -a /etc/skel/. "$PERSISTENT_HOME/" || true\n\
+printf "[General]\\n\
+window_manager=labwc\\n\
+leave_confirmation=true\\n\
+\\n\
+[Wayland]\\n\
+compositor=labwc\\n\
+screen_locker=swaylock\\n" > "$PERSISTENT_HOME/.config/lxqt/session.conf"\n\
+chown -R peter:peter "$PERSISTENT_HOME"\nfi\n' > /usr/local/bin/init-persistent-home.sh && \
+chmod +x /usr/local/bin/init-persistent-home.sh
 
-RUN printf '[Unit]\nDescription=Initialize Persistent Home Directory structure for Elemental\nDefaultDependencies=no\nAfter=run-elemental-persistent.mount\nBefore=local-fs.target home.mount\n\n[Service]\nType=oneshot\nExecStart=/usr/local/bin/init-persistent-home.sh\nRemainAfterExit=yes\n\n[Install]\nWantedBy=local-fs.target\n' > /etc/systemd/system/init-persistent-home.service
+RUN printf '[Unit]\n\
+Description=Initialize Persistent Home Directory structure for Elemental\n\
+DefaultDependencies=no\n\
+After=run-elemental-persistent.mount\n\
+Before=local-fs.target home.mount\n\
+\n\
+[Service]\n\
+Type=oneshot\n\
+ExecStart=/usr/local/bin/init-persistent-home.sh\n\
+RemainAfterExit=yes\n\n[Install]\nWantedBy=local-fs.target\n' > /etc/systemd/system/init-persistent-home.service
 
 RUN systemctl enable init-persistent-home.service
 
