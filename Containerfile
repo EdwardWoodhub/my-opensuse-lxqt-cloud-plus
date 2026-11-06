@@ -193,7 +193,7 @@ After=network.target\n\
 Type=simple\n\
 User=peter\n\
 Environment="WAYLAND_DISPLAY=wayland-0"\n\
-Environment="XDG_RUNTIME_DIR=/run/user/1000"\n\
+Environment="XDG_RUNTIME_DIR=/run/user/1001"\n\
 Environment="HOME=/home/peter"\n\
 ExecStart=/usr/bin/wayvnc -C /home/peter/.config/wayvnc/config\n\
 Restart=on-failure\n\
