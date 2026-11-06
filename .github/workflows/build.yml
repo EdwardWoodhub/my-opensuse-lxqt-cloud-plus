@@ -9,7 +9,7 @@ on:
       - '.gitignore'
       - 'docs/**'
   schedule:
-    - cron: '03 19 * * *'
+    - cron: '04 17 * * *'
   workflow_dispatch:
 
 env:
