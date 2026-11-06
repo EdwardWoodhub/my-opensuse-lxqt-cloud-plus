@@ -184,24 +184,28 @@ RemainAfterExit=yes\n\n[Install]\nWantedBy=local-fs.target\n' > /etc/systemd/sys
 
 RUN systemctl enable init-persistent-home.service
 
-
 # 使用 printf 生成 wayvnc.service，完全不包含端口信息
 RUN printf '[Unit]\n\
 Description=WayVNC VNC Server\n\
-After=graphical-session.target\n\
-PartOf=graphical-session.target\n\
+After=network.target\n\
 \n\
 [Service]\n\
 Type=simple\n\
-ExecStart=/usr/bin/wayvnc\n\
+User=peter\n\
+Environment="WAYLAND_DISPLAY=wayland-0"\n\
+Environment="XDG_RUNTIME_DIR=/run/user/1000"\n\
+Environment="HOME=/home/peter"\n\
+ExecStart=/usr/bin/wayvnc -C /home/peter/.config/wayvnc/config\n\
 Restart=on-failure\n\
 RestartSec=5\n\
 \n\
 [Install]\n\
-WantedBy=graphical-session.target\n' > /etc/systemd/system/wayvnc.service
+WantedBy=multi-user.target\n' > /etc/systemd/system/wayvnc.service
 
 # 启用wayvnc服务
 RUN systemctl enable wayvnc.service
+
+
 
 # ------------------------------
 # 7. 固化 SDDM 默认显示管理器与系统启动目标软链接
