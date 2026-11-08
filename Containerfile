@@ -78,6 +78,7 @@ RUN ARCH=$(uname -m); \
         mtools \
         nano \
         NetworkManager \
+        nextcloud \
         noto-sans-cjk-fonts \
         openbox \
         openssh-clients \
