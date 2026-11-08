@@ -148,13 +148,22 @@ jobs:
         run: |
           set -e
           # 释放宿主机物理空间：删除上一步残留在 build-output 的 ISO 
-          # (ISO 已被移动/复制到 release-assets 中，这里可以安全删除)
           echo "==> 0.1 清除 ISO 构建残留释放 Runner 空间..."
           rm -rf build-output/*.iso* || true
           docker system prune -a -f --volumes || true
           mkdir -p build-output raw-draft-assets work
           RAW_BASE_NAME="${{ env.ISO_BASE_NAME }}-${{ env.RELEASE_TAG }}"
           CUSTOM_RAW="build-output/${RAW_BASE_NAME}.raw"
+
+          # 新增此处逻辑：强制扩大临时挂载的内部 RAW 分区
+          echo "==> 0.2 生成 Elemental 分区配置文件..."
+          cat <<EOF > work/build-config.yaml
+          volumes:
+            state:
+              size: 15360
+            recovery:
+              size: 8192
+          EOF
 
           echo "==> 1. 用官方 elemental 生成完整可用的临时 RAW..."
           docker run --rm \
@@ -165,8 +174,10 @@ jobs:
             --name official \
             --output /work \
             --type raw \
+            --cloud-init /work/build-config.yaml \
             --system "docker:${{ env.FULL_IMAGE_NAME }}:${{ env.RELEASE_TAG }}"
-
+            
+          # 下面的代码保持不变...
           OFFICIAL_RAW=$(ls work/*.raw | head -n 1)
           echo "Official RAW: ${OFFICIAL_RAW}"
 
