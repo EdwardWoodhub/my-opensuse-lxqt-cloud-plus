@@ -147,6 +147,11 @@ jobs:
       - name: Build Custom Size RAW by Copying Partitions
         run: |
           set -e
+          # 释放宿主机物理空间：删除上一步残留在 build-output 的 ISO 
+          # (ISO 已被移动/复制到 release-assets 中，这里可以安全删除)
+          echo "==> 0.1 清除 ISO 构建残留释放 Runner 空间..."
+          rm -rf build-output/*.iso* || true
+          docker system prune -a -f --volumes || true
           mkdir -p build-output raw-draft-assets work
           RAW_BASE_NAME="${{ env.ISO_BASE_NAME }}-${{ env.RELEASE_TAG }}"
           CUSTOM_RAW="build-output/${RAW_BASE_NAME}.raw"
