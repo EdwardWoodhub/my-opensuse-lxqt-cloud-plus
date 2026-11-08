@@ -160,9 +160,9 @@ jobs:
           cat <<EOF > work/build-config.yaml
           volumes:
             state:
-              size: 15360
-            recovery:
               size: 8192
+            recovery:
+              size: 4096
           EOF
 
           echo "==> 1. 用官方 elemental 生成初始 RAW (已去掉 --debug 防止日志截断)..."
