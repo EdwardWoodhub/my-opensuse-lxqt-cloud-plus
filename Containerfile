@@ -31,6 +31,7 @@ RUN ARCH=$(uname -m); \
     zypper --non-interactive --gpg-auto-import-keys install --no-recommends -- \
         ${ADD_PKGS} \
         7zip \
+        adwaita-icon-theme \
         at-spi2-core \
         audit \
         bandwhich \
